@@ -1,0 +1,153 @@
+
+---
+title: "Data Viz Module Project"
+author: "Max Wang"
+date: "03/28/2024"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          toc_float: true
+          theme: cosmo
+          code_folding: show
+---
+## TOPIC
+
+* what is your general topic area?
+Science, climate change, impact of humans on the environment
+
+## QUESTIONS
+
+* What questions or problems are you answering/solving?
+At the turn of the 21st century, how has temperature and precipitation in Charlottesville been changed and affected, possibly due to the development of climate change as a leading issue?
+
+## AUDIENCE
+
+* Who is your primary audience?
+Citizens and people in Charlottesville, Virginia
+
+## DATA
+
+* where is your data from? Provide a link (prettified hyperlink) and/or cite you source
+My data is from the National Centers for Environmental Information - Website - https://www.ncdc.noaa.gov/cdo-web/
+* when did you access the data? what was the original use of the data? 
+I accessed the data on 03/27/24, and the original use of the data was to analyze climate data and trends, "preserving climate records from satellite data"
+* what variables are in your dataset - create a table of the variables you plan to use and a short description
+Variables in the dataset of Charlottesville include maximum temperature, minimum temperature, precipitation levels, as well as the date of incidence. In data cleaning, the data for tmin, tmax, and prcp are able to be matched with a specific date of occurrence, known as a time-series, to be used in long-term analysis of temperature and precipitation trends. 
+
+### Load packages
+
+```{r, message = FALSE}
+library(tidyverse)
+library(xts)
+library(tsbox)
+library(zoo)
+install.packages("xts")
+install.packages("tsbox")
+install.packages("forecast")
+install.packages("zoo")
+
+```
+
+### Read in data  
+
+```{r}
+#Charlottesville temperature and precipitation data from NCEI, from 2000-2020
+
+csv = read.csv("3643209.csv", as.is=T)
+names(csv)
+range(csv$DATE) 
+```
+
+### Review/clean datasets
+* conduct data cleaning processes
+* provide code analyzing the structure and layout of datasets
+
+```{r}
+
+#use xts function to create a time-series object called historical, using order.by to convert data to r objects and correlating those dates with tmax, tmin, and prcp 
+
+historical = xts(csv[,c("TMAX","TMIN","PRCP")], order.by=as.Date(csv$DATE))
+
+#ts_regular to create a regular interval, removing the NA values for missing dates 
+
+historical = ts_regular(historical)
+
+#fills in na values by extending previous values
+historical = na.fill(historical, "extend")
+
+#clips off starting and end dates, putting the dates into a window/framework
+historical = window(historical, start=as.Date("2000-01-01"), end=as.Date("2020-12-31"))
+
+
+```
+## DATA VIZ
+
+### Data Viz 1
+
+* State the question you are answering
+* provide code and graph output
+
+#What are the minimum (tmin) and maximum (tmax) temperatures in Charlottesville from 2004 to 2020?
+
+```{r}
+#use ts_ts to plot only ts objects for maximum temperature, instead of xts objects
+plot(ts_ts(historical$TMAX), col="darkred", bty="n", las=1, fg=NA, 
+	ylim=c(-20, 120), ylab="Temperature (°F)", xlab="Year (5-year Intervals)", xlim=c(2004,2024), main = "Historical Changes in Maximum and Minimum Temperature in Charlottesville", cex.main = 0.8)
+
+#ad ts lines for minimum temperature
+lines(ts_ts(historical$TMIN), col="navy")
+
+grid(nx=NA, ny=NULL, lty=1, col="gray")
+
+legend("topright", fill=c("darkred", "navy"), cex=0.7,
+	legend=c("Maximum Temperature", "Minimum Temperature"), bg="white")
+```
+
+
+### Data Viz 2
+
+* State the question you are answering
+* provide code and graph output
+
+#What days in Charlottesville from 2004-2020 yielded the greatest amount of rain?
+
+```{r}
+#create barplot with continuous daily rainfall data
+barplot(historical$PRCP, border=NA, col="darkgreen", ylim=c(0, 2),
+	space=0, bty="n", las=1, fg=NA, ylab="Daily Rainfall (inches)", xlab= "Date", main = "Historical Daily Rainfall Data in Charlottesville", cex.main = 0.8)
+
+grid(nx=NA, ny=NULL, lty=1)
+
+```
+
+### Data Viz 3
+* State the question you are answering
+* provide code and graph output
+
+#What are the average monthly precipitation levels in Charlottesville from 2004-2020?
+```{r}
+
+#use period.apply to aggregate precipitation levels to make trends more clear
+
+monthly.prcp = period.apply(historical$PRCP, INDEX = seq(1, nrow(historical) - 1, 30.4375), FUN = sum)
+
+plot(ts_ts(monthly.prcp), col="darkgreen", 
+	lwd=3, bty="n", las=1, fg=NA, xlab = "Time (5-year Intervals)", ylab="Monthly Precipitation (inches)", main = "Historical Monthly Rainfall Data in Charlottesville", cex.main =0.8)
+
+grid(nx=NA, ny=NULL, lty=1)
+
+
+```
+
+```
+
+## OTHER NOTES
+* Provide clean commented code
+* Report should be thematic
+* For R markdown and ggplot2, you need to go beyond the defaults
+* Vizzes should have labels, legends, annotations, multi-layers, facets, etc as needed
+* Each graph should be unique and utlize different graph types
+
+
+
